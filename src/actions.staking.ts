@@ -185,7 +185,7 @@ export class ActionsStaking {
      * @param amount number
      * @returns Promise<string> transaction id
      */
-    public async stake(
+    public async stakeByUser(
         payer: PublicKey,
         userAddress: PublicKey,
         stakePoolAddress: PublicKey,
@@ -250,6 +250,78 @@ export class ActionsStaking {
                 },
                 {
                     incoming_amount: amount * Math.pow(10, tokenXDecimal),
+                },
+                stakePoolProgramId,
+            ),
+        );
+
+        const rawTx = transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: false,
+        });
+
+        return {
+            rawTx,
+            txFee,
+            unsignedTransaction: transaction,
+        };
+    }
+
+    /**
+     * Withdraw reward by user
+     * @param payer
+     * @param userAddress
+     * @param stakePoolAddress PublicKey
+     * @returns Promise<string> transaction id
+     */
+    public async withdrawRewardByUser(
+        payer: PublicKey,
+        userAddress: PublicKey,
+        stakePoolAddress: PublicKey,
+    ): Promise<IResponseTxFee> {
+        const {blockhash} = await this.connection.getRecentBlockhash();
+        const transaction = new Transaction({
+            recentBlockhash: blockhash,
+            feePayer: payer,
+        });
+        const stakePoolProgramId = await this.getStakePoolProgramId(stakePoolAddress);
+        const {token_y_reward_account} = await this.readPool(stakePoolAddress);
+        const authority = await this.findPoolAuthority(stakePoolAddress);
+        const mintTokenYAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(token_y_reward_account));
+        const userTokenYAddress = await this.findAssociatedTokenAddress(userAddress, new PublicKey(mintTokenYAddress));
+
+        const {
+            exists: isExisted,
+            associatedAddress: stakePoolMemberAccount,
+        } = await this.getStakePoolAssociatedAccountInfo(userAddress, stakePoolAddress);
+
+        if (!isExisted) {
+            // create joined user data if not exists
+            transaction.add(
+                StakeInstructions.initStakeMemberAccount(
+                    userAddress,
+                    new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+                    stakePoolAddress,
+                ),
+                StakeInstructions.initStakeMemberData(
+                    userAddress,
+                    stakePoolAddress,
+                    new PublicKey(stakePoolMemberAccount),
+                ),
+            );
+        }
+
+        const txFee = await this.getLamportPerSignature(blockhash);
+        transaction.add(
+            StakeInstructions.withdrawRewardsByUser(
+                {
+                    poolTokenYRewardAccount:  new PublicKey(token_y_reward_account),
+                    stakePoolAccount: new PublicKey(stakePoolAddress),
+                    stakePoolAuthority: authority,
+                    tokenProgramId: TOKEN_PROGRAM_ID,
+                    userAccount: new PublicKey(userAddress),
+                    userAssociatedTokenYAccount: new PublicKey(userTokenYAddress),
+                    userStakeAccount: new PublicKey(stakePoolMemberAccount)
                 },
                 stakePoolProgramId,
             ),

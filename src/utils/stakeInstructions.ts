@@ -214,4 +214,64 @@ export class StakeInstructions {
             data,
         });
     }
+
+    static withdrawRewardsByUser(
+        accounts: {
+            stakePoolAccount: PublicKey;
+            stakePoolAuthority: PublicKey;
+
+            userAccount: PublicKey;
+            userStakeAccount: PublicKey;
+
+            userAssociatedTokenYAccount: PublicKey;
+            poolTokenYRewardAccount: PublicKey;
+            tokenProgramId: PublicKey;
+        },
+        poolProgramId: PublicKey,
+    ): TransactionInstruction {
+        const {
+            stakePoolAccount,
+            stakePoolAuthority,
+            userAccount,
+            userStakeAccount,
+            userAssociatedTokenYAccount,
+            poolTokenYRewardAccount,
+            tokenProgramId,
+        } = accounts;
+        const keys = [
+            {pubkey: stakePoolAccount, isSigner: false, isWritable: true},
+            {pubkey: stakePoolAuthority, isSigner: false, isWritable: false},
+            {pubkey: userAccount, isSigner: true, isWritable: true},
+            {pubkey: userStakeAccount, isSigner: true, isWritable: true},
+            {pubkey: userAssociatedTokenYAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenYRewardAccount, isSigner: false, isWritable: true},
+            {pubkey: tokenProgramId, isSigner: false, isWritable: false},
+            {
+                pubkey: clockSysvarAccount,
+                isSigner: false,
+                isWritable: false,
+            },
+        ];
+
+        const commandDataLayout = BufferLayout.struct([
+            BufferLayout.u8('instruction'),
+        ]);
+
+        let data = Buffer.alloc(1024);
+        {
+            const encodeLength = commandDataLayout.encode(
+                {
+                    instruction: 3, // withdraw reward instruction
+                },
+                data,
+            );
+            data = data.slice(0, encodeLength);
+        }
+
+        return new TransactionInstruction({
+            keys,
+            programId: poolProgramId,
+            data,
+        });
+    }
 }
