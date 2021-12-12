@@ -20,7 +20,7 @@ export class ActionsStaking {
 
         return new PublicKey(pool_acc.owner);
     }
-    public async getPoolProgramId(stakePoolAddress: PublicKey): Promise<PublicKey> {
+    public async getStakePoolProgramId(stakePoolAddress: PublicKey): Promise<PublicKey> {
         return this.getOwner(stakePoolAddress);
     }
 
@@ -31,7 +31,7 @@ export class ActionsStaking {
      * @param stakePoolAddress
      */
     async findPoolAuthority(stakePoolAddress: PublicKey): Promise<PublicKey> {
-        const programId = await this.getPoolProgramId(stakePoolAddress);
+        const programId = await this.getStakePoolProgramId(stakePoolAddress);
         const [authority] = await PublicKey.findProgramAddress([stakePoolAddress.toBuffer()], programId);
         return authority;
     }
@@ -128,7 +128,7 @@ export class ActionsStaking {
             recentBlockhash: blockhash,
             feePayer: payer,
         });
-        const stakePoolProgramId = await this.getPoolProgramId(stakePoolAddress);
+        const stakePoolProgramId = await this.getStakePoolProgramId(stakePoolAddress);
         const {token_y_reward_account, token_x_stake_account} = await this.readPool(stakePoolAddress);
         const authority = await this.findPoolAuthority(stakePoolAddress);
         const mintTokenYAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(token_y_reward_account))
@@ -176,6 +176,96 @@ export class ActionsStaking {
         };
     }
 
+
+    /**
+     * Stake by user
+     * @param payer
+     * @param userAddress
+     * @param stakePoolAddress PublicKey
+     * @param amount number
+     * @returns Promise<string> transaction id
+     */
+    public async stake(
+        payer: PublicKey,
+        userAddress: PublicKey,
+        stakePoolAddress: PublicKey,
+        amount: number,
+    ): Promise<IResponseTxFee> {
+        const {blockhash} = await this.connection.getRecentBlockhash();
+        const transaction = new Transaction({
+            recentBlockhash: blockhash,
+            feePayer: payer,
+        });
+        const stakePoolProgramId = await this.getStakePoolProgramId(stakePoolAddress);
+        const {token_x_stake_account, token_y_reward_account} = await this.readPool(stakePoolAddress);
+        const authority = await this.findPoolAuthority(stakePoolAddress);
+        const mintTokenXAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(token_x_stake_account))
+        const mintTokenYAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(token_y_reward_account))
+        const userTokenXAddress = await this.findAssociatedTokenAddress(userAddress, new PublicKey(mintTokenXAddress));
+        const userTokenYAddress = await this.findAssociatedTokenAddress(userAddress, new PublicKey(mintTokenYAddress));
+        const tokenXDecimal = await this.getTokenDecimalsFromMintAccount(mintTokenXAddress);
+
+        const {
+            exists: isExisted,
+            associatedAddress: stakePoolMemberAccount,
+        } = await this.getStakePoolAssociatedAccountInfo(userAddress, stakePoolAddress);
+
+        if (!isExisted) {
+            // create joined user data if not exists
+            transaction.add(
+                StakeInstructions.initStakeMemberAccount(
+                    userAddress,
+                    new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+                    stakePoolAddress,
+                ),
+                StakeInstructions.initStakeMemberData(
+                    userAddress,
+                    stakePoolAddress,
+                    new PublicKey(stakePoolMemberAccount),
+                ),
+            );
+        }
+
+        const txFee = await this.getLamportPerSignature(blockhash);
+        transaction.add(
+            Instructions.createApproveInstruction({
+                programId: TOKEN_PROGRAM_ID,
+                source: userTokenXAddress,
+                delegate: authority,
+                owner: userAddress,
+                amount: amount * Math.pow(10, tokenXDecimal),
+                signers: [userAddress],
+            }),
+            StakeInstructions.stakeByUser(
+                {
+                    poolTokenXStakeAccount: new PublicKey(token_x_stake_account),
+                    poolTokenYRewardAccount:  new PublicKey(token_y_reward_account),
+                    stakePoolAccount: new PublicKey(stakePoolAddress),
+                    stakePoolAuthority: authority,
+                    tokenProgramId: TOKEN_PROGRAM_ID,
+                    userAccount: new PublicKey(userAddress),
+                    userAssociatedTokenXAccount: new PublicKey(userTokenXAddress),
+                    userAssociatedTokenYAccount: new PublicKey(userTokenYAddress),
+                    userStakeAccount: new PublicKey(stakePoolMemberAccount)
+                },
+                {
+                    incoming_amount: amount * Math.pow(10, tokenXDecimal),
+                },
+                stakePoolProgramId,
+            ),
+        );
+
+        const rawTx = transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: false,
+        });
+
+        return {
+            rawTx,
+            txFee,
+            unsignedTransaction: transaction,
+        };
+    }
 
 
     /**

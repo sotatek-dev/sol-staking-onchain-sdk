@@ -106,11 +106,11 @@ export class StakeInstructions {
         const keys = [
             {pubkey: stakePoolAccount, isSigner: false, isWritable: true},
             {pubkey: stakePoolAuthority, isSigner: false, isWritable: false},
+            {pubkey: tokenProgramId, isSigner: false, isWritable: false},
             {pubkey: adminAccount, isSigner: true, isWritable: true},
             {pubkey: adminAssociatedTokenYAccount, isSigner: false, isWritable: true},
             {pubkey: poolTokenXStakeAccount, isSigner: false, isWritable: true},
             {pubkey: poolTokenYRewardAccount, isSigner: false, isWritable: true},
-            {pubkey: tokenProgramId, isSigner: false, isWritable: false},
             {
                 pubkey: clockSysvarAccount,
                 isSigner: false,
@@ -128,6 +128,79 @@ export class StakeInstructions {
             const encodeLength = commandDataLayout.encode(
                 {
                     instruction: 101, // Join instruction
+                    incoming_amount: new Numberu64(inputData.incoming_amount).toBuffer(),
+                },
+                data,
+            );
+            data = data.slice(0, encodeLength);
+        }
+
+        return new TransactionInstruction({
+            keys,
+            programId: poolProgramId,
+            data,
+        });
+    }
+
+
+    static stakeByUser(
+        accounts: {
+            stakePoolAccount: PublicKey;
+            stakePoolAuthority: PublicKey;
+            tokenProgramId: PublicKey;
+
+            userAccount: PublicKey;
+            userStakeAccount: PublicKey;
+
+            userAssociatedTokenXAccount: PublicKey;
+            poolTokenXStakeAccount: PublicKey;
+
+            userAssociatedTokenYAccount: PublicKey;
+            poolTokenYRewardAccount: PublicKey;
+        },
+        inputData: {
+            incoming_amount: number;
+        },
+        poolProgramId: PublicKey,
+    ): TransactionInstruction {
+        const {
+            stakePoolAccount,
+            stakePoolAuthority,
+            userAccount,
+            userStakeAccount,
+            userAssociatedTokenXAccount,
+            userAssociatedTokenYAccount,
+            poolTokenXStakeAccount,
+            poolTokenYRewardAccount,
+            tokenProgramId,
+        } = accounts;
+        const keys = [
+            {pubkey: stakePoolAccount, isSigner: false, isWritable: true},
+            {pubkey: stakePoolAuthority, isSigner: false, isWritable: false},
+            {pubkey: tokenProgramId, isSigner: false, isWritable: false},
+            {pubkey: userAccount, isSigner: true, isWritable: true},
+            {pubkey: userStakeAccount, isSigner: true, isWritable: true},
+            {pubkey: userAssociatedTokenXAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenXStakeAccount, isSigner: false, isWritable: true},
+            {pubkey: userAssociatedTokenYAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenYRewardAccount, isSigner: false, isWritable: true},
+            {
+                pubkey: clockSysvarAccount,
+                isSigner: false,
+                isWritable: false,
+            },
+        ];
+
+        const commandDataLayout = BufferLayout.struct([
+            BufferLayout.u8('instruction'),
+            Layout.uint64('incoming_amount'),
+        ]);
+
+        let data = Buffer.alloc(1024);
+        {
+            const encodeLength = commandDataLayout.encode(
+                {
+                    instruction: 2, // stake instruction
                     incoming_amount: new Numberu64(inputData.incoming_amount).toBuffer(),
                 },
                 data,
