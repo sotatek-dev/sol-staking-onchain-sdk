@@ -1,8 +1,11 @@
 import {PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, TransactionInstruction} from "@solana/web3.js";
 import * as BufferLayout from 'buffer-layout';
-import {CURRENT_STAKE_PROGRAM_ID} from "../constants";
+import {clockSysvarAccount, CURRENT_STAKE_PROGRAM_ID} from "../constants";
+import * as Layout from './layout';
+import {Numberu64} from "./layout";
 
 export class StakeInstructions {
+
     static initStakeMemberAccount(
         owner: PublicKey,
         associatedStakeAccount: PublicKey,
@@ -68,6 +71,73 @@ export class StakeInstructions {
         return new TransactionInstruction({
             keys,
             programId: new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+            data,
+        });
+    }
+
+    static sendRewardToPoolByAdmin(
+        accounts: {
+            stakePoolAccount: PublicKey;
+            stakePoolAuthority: PublicKey;
+            tokenProgramId: PublicKey;
+
+            adminAccount: PublicKey;
+            adminAssociatedTokenYAccount: PublicKey;
+
+            poolTokenXStakeAccount: PublicKey;
+            poolTokenYRewardAccount: PublicKey;
+        },
+        inputData: {
+            incoming_amount: number;
+        },
+        poolProgramId: PublicKey,
+    ): TransactionInstruction {
+        const {
+            stakePoolAccount,
+            stakePoolAuthority,
+
+            adminAccount,
+            adminAssociatedTokenYAccount,
+
+            poolTokenXStakeAccount,
+            poolTokenYRewardAccount,
+            tokenProgramId,
+        } = accounts;
+        const keys = [
+            {pubkey: stakePoolAccount, isSigner: false, isWritable: true},
+            {pubkey: stakePoolAuthority, isSigner: false, isWritable: false},
+            {pubkey: adminAccount, isSigner: true, isWritable: true},
+            {pubkey: adminAssociatedTokenYAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenXStakeAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenYRewardAccount, isSigner: false, isWritable: true},
+            {pubkey: tokenProgramId, isSigner: false, isWritable: false},
+            {
+                pubkey: clockSysvarAccount,
+                isSigner: false,
+                isWritable: false,
+            },
+        ];
+
+        const commandDataLayout = BufferLayout.struct([
+            BufferLayout.u8('instruction'),
+            Layout.uint64('incoming_amount'),
+        ]);
+
+        let data = Buffer.alloc(1024);
+        {
+            const encodeLength = commandDataLayout.encode(
+                {
+                    instruction: 101, // Join instruction
+                    incoming_amount: new Numberu64(inputData.incoming_amount).toBuffer(),
+                },
+                data,
+            );
+            data = data.slice(0, encodeLength);
+        }
+
+        return new TransactionInstruction({
+            keys,
+            programId: poolProgramId,
             data,
         });
     }
