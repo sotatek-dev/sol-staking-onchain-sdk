@@ -3,7 +3,7 @@ import {StakeInstructions} from "./utils/stakeInstructions";
 import {CURRENT_STAKE_PROGRAM_ID} from "./constants";
 import {IExtractPoolData, Instructions, IResponseTxFee, StakingPoolLayout} from "./utils";
 import Decimal from "decimal.js";
-import {AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID} from "@solana/spl-token";
+import {AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout, Token, TOKEN_PROGRAM_ID} from "@solana/spl-token";
 
 export class ActionsStaking {
     private connection: Connection;
@@ -56,16 +56,6 @@ export class ActionsStaking {
         return poolData;
     }
 
-    // base function
-    public async getSPLMintTokenAccountInfo(tokenAccountAddress: PublicKey): Promise<PublicKey> {
-        const token_acc = await this.connection.getAccountInfo(new PublicKey(tokenAccountAddress));
-        if (!token_acc?.data) {
-            throw new Error(`Invalid tokenAccountAddress`);
-        }
-
-        const tokenInfo = AccountLayout.decode(token_acc.data);
-        return new PublicKey(tokenInfo.mint);
-    }
 
     // base function
     /**
@@ -87,11 +77,51 @@ export class ActionsStaking {
         )[0];
     }
 
-    public async join(
+    // base function
+    public async getSPLMintTokenAccountInfo(tokenAccountAddress: PublicKey): Promise<PublicKey> {
+        const token_acc = await this.connection.getAccountInfo(new PublicKey(tokenAccountAddress));
+        if (!token_acc?.data) {
+            throw new Error(`Invalid tokenAccountAddress`);
+        }
+
+        const tokenInfo = AccountLayout.decode(token_acc.data);
+        return new PublicKey(tokenInfo.mint);
+    }
+
+    // base function
+    public async getTokenDecimalsFromTokenAccount(tokenAccountAddress: PublicKey): Promise<number> {
+        const mintAccount = await this.getSPLMintTokenAccountInfo(new PublicKey(tokenAccountAddress));
+        const token_acc = await this.connection.getAccountInfo(new PublicKey(mintAccount));
+        if (!token_acc?.data) {
+            throw new Error(`Invalid token`);
+        }
+        const tokenInfo = MintLayout.decode(token_acc.data);
+        return tokenInfo.decimals;
+    }
+
+    // base function
+    public async getTokenDecimalsFromMintAccount(tokenAccountAddress: PublicKey): Promise<number> {
+        const token_acc = await this.connection.getAccountInfo(new PublicKey(tokenAccountAddress));
+        if (!token_acc?.data) {
+            throw new Error(`Invalid token`);
+        }
+        const tokenInfo = MintLayout.decode(token_acc.data);
+        return tokenInfo.decimals;
+    }
+
+
+    /**
+     * Send reward from admin token Y account and create stake pool snapshot
+     * @param payer
+     * @param adminAddress
+     * @param stakePoolAddress
+     * @param amount
+     */
+    public async sendRewardToStakePoolByAdmin(
         payer: PublicKey,
         adminAddress: PublicKey,
         stakePoolAddress: PublicKey,
-        amount: number,
+        amount: number, // this amount is a value after separated with token decimal big number
     ): Promise<IResponseTxFee> {
         const {blockhash} = await this.connection.getRecentBlockhash();
         const transaction = new Transaction({
@@ -103,6 +133,7 @@ export class ActionsStaking {
         const authority = await this.findPoolAuthority(stakePoolAddress);
         const mintTokenYAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(token_y_reward_account))
         const adminTokenYAddress = await this.findAssociatedTokenAddress(adminAddress, new PublicKey(mintTokenYAddress));
+        const tokenYDecimal = await this.getTokenDecimalsFromMintAccount(mintTokenYAddress);
 
         const txFee = await this.getLamportPerSignature(blockhash);
 
@@ -113,7 +144,7 @@ export class ActionsStaking {
                 source: adminTokenYAddress,
                 delegate: authority,
                 owner: adminAddress,
-                amount: amount * LAMPORTS_PER_SOL,
+                amount: amount * Math.pow(10, tokenYDecimal),
                 signers: [adminAddress],
             }),
             StakeInstructions.sendRewardToPoolByAdmin(
@@ -127,7 +158,7 @@ export class ActionsStaking {
                     tokenProgramId: TOKEN_PROGRAM_ID
                 },
                 {
-                    incoming_amount: amount * LAMPORTS_PER_SOL,
+                    incoming_amount: amount * Math.pow(10, tokenYDecimal),
                 },
                 stakePoolProgramId,
             ),
