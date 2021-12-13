@@ -45,12 +45,10 @@ export class ActionsStaking {
 
         const poolData = {
             nonce: result.nonce,
-            root_admin: new PublicKey(result.root_admin).toString(),
-            admin: new PublicKey(result.admin).toString(),
+            version: result.version,
+            admins: new PublicKey(result.admins).toString(),
             token_x_stake_account: new PublicKey(result.token_x_stake_account).toString(),
             token_y_reward_account: new PublicKey(result.token_y_reward_account).toString(),
-            fee_amount: new Decimal(result.fee_amount).toNumber(),
-            fee: new Decimal(result.fee).toNumber(),
         };
 
         return poolData;
@@ -215,13 +213,13 @@ export class ActionsStaking {
             transaction.add(
                 StakeInstructions.initStakeMemberAccount(
                     userAddress,
-                    new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+                    stakePoolMemberAccount,
                     stakePoolAddress,
                 ),
                 StakeInstructions.initStakeMemberData(
                     userAddress,
                     stakePoolAddress,
-                    new PublicKey(stakePoolMemberAccount),
+                    stakePoolMemberAccount,
                 ),
             );
         }
@@ -300,7 +298,7 @@ export class ActionsStaking {
             transaction.add(
                 StakeInstructions.initStakeMemberAccount(
                     userAddress,
-                    new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+                    stakePoolMemberAccount,
                     stakePoolAddress,
                 ),
                 StakeInstructions.initStakeMemberData(
