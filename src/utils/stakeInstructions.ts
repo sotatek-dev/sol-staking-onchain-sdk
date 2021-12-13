@@ -179,7 +179,7 @@ export class StakeInstructions {
             {pubkey: stakePoolAuthority, isSigner: false, isWritable: false},
             {pubkey: tokenProgramId, isSigner: false, isWritable: false},
             {pubkey: userAccount, isSigner: true, isWritable: true},
-            {pubkey: userStakeAccount, isSigner: true, isWritable: true},
+            {pubkey: userStakeAccount, isSigner: false, isWritable: true},
             {pubkey: userAssociatedTokenXAccount, isSigner: false, isWritable: true},
             {pubkey: poolTokenXStakeAccount, isSigner: false, isWritable: true},
             {pubkey: userAssociatedTokenYAccount, isSigner: false, isWritable: true},

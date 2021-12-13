@@ -401,7 +401,7 @@ export class ActionsStaking {
         transaction.add(
             StakeInstructions.initStakeMemberAccount(
                 userAddress,
-                new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+                memberStakeAccount,
                 stakePoolAddress,
             ),
             StakeInstructions.initStakeMemberData(
