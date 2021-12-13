@@ -215,6 +215,78 @@ export class StakeInstructions {
         });
     }
 
+    static unStakeByUser(
+        accounts: {
+            stakePoolAccount: PublicKey;
+            stakePoolAuthority: PublicKey;
+            tokenProgramId: PublicKey;
+
+            userAccount: PublicKey;
+            userStakeAccount: PublicKey;
+
+            userAssociatedTokenXAccount: PublicKey;
+            poolTokenXStakeAccount: PublicKey;
+
+            userAssociatedTokenYAccount: PublicKey;
+            poolTokenYRewardAccount: PublicKey;
+        },
+        inputData: {
+            withdraw_amount: number;
+        },
+        poolProgramId: PublicKey,
+    ): TransactionInstruction {
+        const {
+            stakePoolAccount,
+            stakePoolAuthority,
+            userAccount,
+            userStakeAccount,
+            userAssociatedTokenXAccount,
+            userAssociatedTokenYAccount,
+            poolTokenXStakeAccount,
+            poolTokenYRewardAccount,
+            tokenProgramId,
+        } = accounts;
+        const keys = [
+            {pubkey: stakePoolAccount, isSigner: false, isWritable: true},
+            {pubkey: stakePoolAuthority, isSigner: false, isWritable: false},
+            {pubkey: tokenProgramId, isSigner: false, isWritable: false},
+            {pubkey: userAccount, isSigner: true, isWritable: true},
+            {pubkey: userStakeAccount, isSigner: false, isWritable: true},
+            {pubkey: userAssociatedTokenXAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenXStakeAccount, isSigner: false, isWritable: true},
+            {pubkey: userAssociatedTokenYAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenYRewardAccount, isSigner: false, isWritable: true},
+            {
+                pubkey: clockSysvarAccount,
+                isSigner: false,
+                isWritable: false,
+            },
+        ];
+
+        const commandDataLayout = BufferLayout.struct([
+            BufferLayout.u8('instruction'),
+            Layout.uint64('withdraw_amount'),
+        ]);
+
+        let data = Buffer.alloc(1024);
+        {
+            const encodeLength = commandDataLayout.encode(
+                {
+                    instruction: 4, // unstake instruction
+                    withdraw_amount: new Numberu64(inputData.withdraw_amount).toBuffer(),
+                },
+                data,
+            );
+            data = data.slice(0, encodeLength);
+        }
+
+        return new TransactionInstruction({
+            keys,
+            programId: poolProgramId,
+            data,
+        });
+    }
+
     static withdrawRewardsByUser(
         accounts: {
             stakePoolAccount: PublicKey;
