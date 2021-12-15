@@ -6,7 +6,9 @@ export interface IExtractPoolData {
   admins: string,
   snapShots: ISnapshot[],
   token_x_stake_account: string,
+  token_x_stake_amount?: number,
   token_y_reward_account: string,
+  reward_amount?: number,
 }
 
 export interface ISnapshot {

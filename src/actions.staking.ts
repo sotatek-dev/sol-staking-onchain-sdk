@@ -43,12 +43,22 @@ export class ActionsStaking {
         }
         const result = StakingPoolLayout.decode(Buffer.from(accountInfo.data));
         let snapShots: ISnapshot[] = [];
+        let reward_amount = 0;
         Object.keys(result).forEach(e => {
             if (e.includes("snap_")) {
                 const snap = snapshotHistoryDetail.decode(Buffer.from(result[e]));
+                reward_amount += snap.token_y_reward_amount;
                 snapShots.push(snap);
             }
-        })
+        });
+
+        const balanceToken = await this.connection.getTokenAccountBalance(
+            new PublicKey(result.token_x_stake_account)
+        );
+
+        const mintTokenXAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(result.token_x_stake_account))
+        const tokenXDecimal = await this.getTokenDecimalsFromMintAccount(mintTokenXAddress);
+        const tokenXAmount = tokenXDecimal ? (+balanceToken?.value?.amount / 10**tokenXDecimal) : +balanceToken?.value?.amount
         
         const poolData = {
             nonce: result.nonce,
@@ -57,13 +67,27 @@ export class ActionsStaking {
             admins: new PublicKey(result.admins).toString(),
             token_x_stake_account: new PublicKey(result.token_x_stake_account).toString(),
             token_y_reward_account: new PublicKey(result.token_y_reward_account).toString(),
+            token_x_stake_amount: tokenXAmount || 0,
+            reward_amount: reward_amount / 10**9
         };
         
 
         return poolData;
     }
 
-    async getClaimAvailale(memberStakeAccount: PublicKey, stakePoolAddress: PublicKey) {
+    async getBalance(tokenAccountAddress: PublicKey, tokenMintAddress = 'So11111111111111111111111111111111111111112') {
+        console.log(tokenMintAddress, '-----tokenMintAddress');
+        
+        const stakeAccountAddress = await this.findAssociatedTokenAddress(tokenAccountAddress, new PublicKey(tokenMintAddress));
+        console.log(stakeAccountAddress.toString(), '-----stakeAccountAddress', tokenAccountAddress.toString());
+        const res = await this.connection.getTokenAccountBalance(
+          stakeAccountAddress
+        );
+
+        return +res?.value?.amount || 0;
+      }
+
+    async getClaimAvailale(memberStakeAccount: PublicKey, stakePoolAddress: PublicKey): Promise<number> {
         let claimable = 0;
         const {
             exists: isExisted,
@@ -71,7 +95,7 @@ export class ActionsStaking {
         } = await this.getStakePoolAssociatedAccountInfo(memberStakeAccount, stakePoolAddress);
 
         if (!isExisted) {
-            return {};
+            return 0;
         }
         const accountInfo = await this.connection.getAccountInfo(stakePoolMemberAccount);
         if (!accountInfo) {
