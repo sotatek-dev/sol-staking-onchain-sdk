@@ -1,7 +1,7 @@
 import {Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction} from "@solana/web3.js";
 import {StakeInstructions} from "./utils/stakeInstructions";
 import {CURRENT_STAKE_PROGRAM_ID} from "./constants";
-import {IExtractPoolData, Instructions, IResponseTxFee, StakingPoolLayout} from "./utils";
+import {IExtractPoolData, Instructions, IResponseTxFee, ISnapshot, MemberLayout, snapshotHistoryDetail, StakingPoolLayout} from "./utils";
 import Decimal from "decimal.js";
 import {AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout, Token, TOKEN_PROGRAM_ID} from "@solana/spl-token";
 
@@ -42,16 +42,71 @@ export class ActionsStaking {
             throw new Error('Can not find pool address');
         }
         const result = StakingPoolLayout.decode(Buffer.from(accountInfo.data));
-
+        let snapShots: ISnapshot[] = [];
+        Object.keys(result).forEach(e => {
+            if (e.includes("snap_")) {
+                const snap = snapshotHistoryDetail.decode(Buffer.from(result[e]));
+                snapShots.push(snap);
+            }
+        })
+        
         const poolData = {
             nonce: result.nonce,
             version: result.version,
+            snapShots: snapShots,
             admins: new PublicKey(result.admins).toString(),
             token_x_stake_account: new PublicKey(result.token_x_stake_account).toString(),
             token_y_reward_account: new PublicKey(result.token_y_reward_account).toString(),
         };
+        
 
         return poolData;
+    }
+
+    async getClaimAvailale(memberStakeAccount: PublicKey, stakePoolAddress: PublicKey) {
+        let claimable = 0;
+        const {
+            exists: isExisted,
+            associatedAddress: stakePoolMemberAccount,
+        } = await this.getStakePoolAssociatedAccountInfo(memberStakeAccount, stakePoolAddress);
+
+        if (!isExisted) {
+            return {};
+        }
+        const accountInfo = await this.connection.getAccountInfo(stakePoolMemberAccount);
+        if (!accountInfo) {
+            throw new Error('Can not find stakePoolMemberAccount');
+        }
+        const memberData = MemberLayout.decode(Buffer.from(accountInfo.data));
+        const poolData = await this.readPool(stakePoolAddress);
+        if (poolData.snapShots?.length > 0) {
+            poolData.snapShots.forEach(snapshot => {
+                if (!(memberData.stake_at > snapshot.snapshot_at || memberData.withdraw_reward_at > snapshot.snapshot_at) && snapshot.token_x_total_staked_amount > 0) {
+                    let accumulationAmount = snapshot.token_y_reward_amount / snapshot.token_x_total_staked_amount * memberData.token_x_staked_amount
+                    claimable += accumulationAmount;
+                }
+            });
+        }
+    
+        return claimable;
+    }
+
+    async getMemberData(memberStakeAccount: PublicKey, stakePoolAddress: PublicKey) {
+        const {
+            exists: isExisted,
+            associatedAddress: stakePoolMemberAccount,
+        } = await this.getStakePoolAssociatedAccountInfo(memberStakeAccount, stakePoolAddress);
+
+        if (!isExisted) {
+            return {};
+        }
+        const accountInfo = await this.connection.getAccountInfo(stakePoolMemberAccount);
+        if (!accountInfo) {
+            throw new Error('Can not find stakePoolMemberAccount data');
+        }
+        const memberData = MemberLayout.decode(Buffer.from(accountInfo.data));
+    
+        return memberData;
     }
 
 

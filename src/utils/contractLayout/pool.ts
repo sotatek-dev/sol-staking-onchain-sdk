@@ -116,3 +116,17 @@ export const InitPoolLayout = [
   BufferLayout.nu64('fee'),
 ];
 
+export const MemberLayout = BufferLayout.struct([
+  Layout.bool('is_initialized'),
+  Layout.publicKey('pubkey'),
+  Layout.publicKey('pool_account'),
+  BufferLayout.nu64('token_x_staked_amount'),
+  BufferLayout.nu64('stake_at'),
+  BufferLayout.nu64('withdraw_reward_at')
+]);
+
+export const snapshotHistoryDetail = BufferLayout.struct([
+  BufferLayout.nu64('token_y_reward_amount'),
+  BufferLayout.nu64('token_x_total_staked_amount'),
+  BufferLayout.nu64('snapshot_at')
+]);
