@@ -122,7 +122,8 @@ export const MemberLayout = BufferLayout.struct([
   Layout.publicKey('pool_account'),
   BufferLayout.nu64('token_x_staked_amount'),
   BufferLayout.nu64('stake_at'),
-  BufferLayout.nu64('withdraw_reward_at')
+  BufferLayout.nu64('withdraw_reward_at'),
+  BufferLayout.nu64('unstake_amount')
 ]);
 
 export const snapshotHistoryDetail = BufferLayout.struct([

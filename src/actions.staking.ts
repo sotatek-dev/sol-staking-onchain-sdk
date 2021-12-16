@@ -68,7 +68,8 @@ export class ActionsStaking {
             token_x_stake_account: new PublicKey(result.token_x_stake_account).toString(),
             token_y_reward_account: new PublicKey(result.token_y_reward_account).toString(),
             token_x_stake_amount: tokenXAmount || 0,
-            reward_amount: reward_amount / 10**9
+            reward_amount: reward_amount / 10**9,
+            token_x_decimal: tokenXDecimal,
         };
         
 
