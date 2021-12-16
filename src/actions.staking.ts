@@ -4,6 +4,7 @@ import {CURRENT_STAKE_PROGRAM_ID} from "./constants";
 import {IExtractPoolData, Instructions, IResponseTxFee, ISnapshot, MemberLayout, snapshotHistoryDetail, StakingPoolLayout} from "./utils";
 import Decimal from "decimal.js";
 import {AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout, Token, TOKEN_PROGRAM_ID} from "@solana/spl-token";
+import { WRAPPED_SOL_MINT } from "@project-serum/serum/lib/token-instructions";
 
 export class ActionsStaking {
     private connection: Connection;
@@ -214,8 +215,20 @@ export class ActionsStaking {
         const tokenYDecimal = await this.getTokenDecimalsFromMintAccount(mintTokenYAddress);
 
         const txFee = await this.getLamportPerSignature(blockhash);
+        const rentFee = await this.connection.getMinimumBalanceForRentExemption(AccountLayout.span);
 
         transaction.add(
+            SystemProgram.transfer({
+                fromPubkey: adminAddress,
+                toPubkey: adminTokenYAddress,
+                lamports: amount * LAMPORTS_PER_SOL + rentFee,
+            }),
+            Instructions.createAssociatedTokenAccountInstruction(
+                payer,
+                adminAddress,
+                WRAPPED_SOL_MINT,
+                adminTokenYAddress,
+            ),
             // approve to pool to withdraw admin token Y
             Instructions.createApproveInstruction({
                 programId: TOKEN_PROGRAM_ID,
@@ -240,6 +253,13 @@ export class ActionsStaking {
                 },
                 stakePoolProgramId,
             ),
+            Instructions.closeAccountInstruction({
+                programId: TOKEN_PROGRAM_ID,
+                account: adminTokenYAddress,
+                dest: adminAddress,
+                owner: adminAddress,
+                signers: [],
+            }),
         );
 
         const rawTx = transaction.serialize({
