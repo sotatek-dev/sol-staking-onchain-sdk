@@ -491,6 +491,23 @@ export class ActionsStaking {
             );
         }
 
+        const {
+            associatedAddress: associatedUserToken,
+            exists: associatedAddressExists,
+          } = await this.getAssociatedAccountInfo(userAddress, WRAPPED_SOL_MINT);
+
+        if (!associatedAddressExists) {
+            // create associated address if not exists
+            transaction.add(
+              Instructions.createAssociatedTokenAccountInstruction(
+                userAddress,
+                userAddress,
+                WRAPPED_SOL_MINT,
+                associatedUserToken,
+              ),
+            );
+          }
+
         const txFee = await this.getLamportPerSignature(blockhash);
         transaction.add(
             StakeInstructions.withdrawRewardsByUser(
@@ -505,6 +522,13 @@ export class ActionsStaking {
                 },
                 stakePoolProgramId,
             ),
+            Instructions.closeAccountInstruction({
+                programId: TOKEN_PROGRAM_ID,
+                account: associatedUserToken,
+                dest: userAddress,
+                owner: userAddress,
+                signers: [],
+            }),
         );
 
         const rawTx = transaction.serialize({
@@ -592,6 +616,30 @@ export class ActionsStaking {
         );
 
         return {transaction};
+    }
+
+    async getAssociatedAccountInfo(
+        targetAddress: PublicKey,
+        tokenMintAddress: PublicKey,
+      ): Promise<{associatedAddress: PublicKey; exists: boolean}> {
+        const associatedAccount = await this.findAssociatedTokenAddress(
+          targetAddress,
+          tokenMintAddress,
+        );
+    
+        try {
+          const accountInfo = await this.connection.getAccountInfo(associatedAccount);
+    
+          return {
+            associatedAddress: associatedAccount,
+            exists: !!accountInfo,
+          };
+        } catch (err) {
+          return {
+            associatedAddress: associatedAccount,
+            exists: false,
+          };
+        }
     }
 
     // base function
