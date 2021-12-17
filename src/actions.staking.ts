@@ -78,17 +78,21 @@ export class ActionsStaking {
     }
 
     async getBalance(tokenAccountAddress: PublicKey, tokenMintAddress = 'So11111111111111111111111111111111111111112') {
-        console.log(tokenMintAddress, '-----tokenMintAddress');
-        const tokenDecimal = await this.getTokenDecimalsFromMintAccount(new PublicKey(tokenMintAddress));
-        
-        const stakeAccountAddress = await this.findAssociatedTokenAddress(tokenAccountAddress, new PublicKey(tokenMintAddress));
-        console.log(stakeAccountAddress.toString(), '-----stakeAccountAddress', tokenAccountAddress.toString());
-        const res = await this.connection.getTokenAccountBalance(
-          stakeAccountAddress
-        );
-        
-
-        return +res?.value?.amount / ( 10**tokenDecimal || 0) || 0;
+        try {
+            const tokenDecimal = await this.getTokenDecimalsFromMintAccount(new PublicKey(tokenMintAddress));
+            
+            const stakeAccountAddress = await this.findAssociatedTokenAddress(tokenAccountAddress, new PublicKey(tokenMintAddress));
+            console.log(stakeAccountAddress.toString(), '-----stakeAccountAddress', tokenAccountAddress.toString());
+            const res = await this.connection.getTokenAccountBalance(
+              stakeAccountAddress
+            );
+            
+    
+            return +res?.value?.amount / ( 10**tokenDecimal || 0) || 0;
+        } catch (e) {
+            console.log("🚀 ~ file: actions.staking.ts ~ line 93 ~ ActionsStaking ~ getBalance ~ e", e)
+            return 0;
+        }
       }
 
     async getClaimAvailale(memberStakeAccount: PublicKey, stakePoolAddress: PublicKey): Promise<number> {
@@ -133,6 +137,12 @@ export class ActionsStaking {
             throw new Error('Can not find stakePoolMemberAccount data');
         }
         const memberData = MemberLayout.decode(Buffer.from(accountInfo.data));
+        if (memberData.token_x_staked_amount === NaN) {
+            memberData.token_x_staked_amount = 0
+        }
+        if (memberData.unstaked_amount === NaN) {
+            memberData.unstake_amount = 0
+        }
     
         return memberData;
     }
