@@ -1,6 +1,6 @@
 {
   "name": "@solbank/staking-onchain-program-sdk",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "main": "dist/index.js",
   "deprecated": false,
   "description": "On chain program sdk",
