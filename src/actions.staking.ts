@@ -137,10 +137,10 @@ export class ActionsStaking {
             throw new Error('Can not find stakePoolMemberAccount data');
         }
         const memberData = MemberLayout.decode(Buffer.from(accountInfo.data));
-        if (memberData.token_x_staked_amount === NaN) {
+        if (isNaN(memberData.token_x_staked_amount)) {
             memberData.token_x_staked_amount = 0
         }
-        if (memberData.unstaked_amount === NaN) {
+        if (isNaN(memberData.unstaked_amount)) {
             memberData.unstake_amount = 0
         }
     
