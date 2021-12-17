@@ -79,14 +79,16 @@ export class ActionsStaking {
 
     async getBalance(tokenAccountAddress: PublicKey, tokenMintAddress = 'So11111111111111111111111111111111111111112') {
         console.log(tokenMintAddress, '-----tokenMintAddress');
+        const tokenDecimal = await this.getTokenDecimalsFromMintAccount(new PublicKey(tokenMintAddress));
         
         const stakeAccountAddress = await this.findAssociatedTokenAddress(tokenAccountAddress, new PublicKey(tokenMintAddress));
         console.log(stakeAccountAddress.toString(), '-----stakeAccountAddress', tokenAccountAddress.toString());
         const res = await this.connection.getTokenAccountBalance(
           stakeAccountAddress
         );
+        
 
-        return +res?.value?.amount || 0;
+        return +res?.value?.amount / ( 10**tokenDecimal || 0) || 0;
       }
 
     async getClaimAvailale(memberStakeAccount: PublicKey, stakePoolAddress: PublicKey): Promise<number> {
