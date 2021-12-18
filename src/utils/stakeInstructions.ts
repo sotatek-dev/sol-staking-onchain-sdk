@@ -215,6 +215,52 @@ export class StakeInstructions {
         });
     }
 
+    static updatePenaltyFee(
+        accounts: {
+            poolAccount: PublicKey;
+            adminAddress: PublicKey;
+        },
+        poolProgramId: PublicKey,
+        inputData: {
+            fee: number,
+            minStakeHours: number
+        }
+    ): TransactionInstruction {
+        const {poolAccount, adminAddress} = accounts;
+        const keys = [
+            {pubkey: poolAccount, isSigner: false, isWritable: true},
+            {pubkey: adminAddress, isSigner: true, isWritable: true},
+        ];
+
+        const commandDataLayout = BufferLayout.struct([
+            BufferLayout.u8('instruction'),
+            BufferLayout.u32('new_penalty_fee'),
+            BufferLayout.nu64('new_min_stake_hours'),
+        ]);
+        console.log('inputData.minStakeHours', inputData.minStakeHours);
+        
+
+        let data = Buffer.alloc(1024);
+        {
+            const encodeLength = commandDataLayout.encode(
+            {
+                instruction: 102, // Update Penalty Fee,
+                new_penalty_fee: inputData.fee,
+                new_min_stake_hours: inputData.minStakeHours
+
+            },
+            data,
+            );
+            data = data.slice(0, encodeLength);
+        }
+
+        return new TransactionInstruction({
+            keys,
+            programId: poolProgramId,
+            data,
+        })
+    }
+
     static unStakeByUser(
         accounts: {
             stakePoolAccount: PublicKey;

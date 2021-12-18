@@ -10,6 +10,9 @@ export interface IExtractPoolData {
   token_y_reward_account: string,
   reward_amount: number,
   token_x_decimal: number,
+  total_reward: number,
+  penalty_fee: number,
+  min_stake_hours: number,
 }
 
 export interface ISnapshot {

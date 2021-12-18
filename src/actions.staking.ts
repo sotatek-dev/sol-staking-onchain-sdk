@@ -49,8 +49,6 @@ export class ActionsStaking {
             if (e.includes("snap_")) {
                 const snap = snapshotHistoryDetail.decode(Buffer.from(result[e]));
                 reward_amount += (snap.token_y_reward_amount / 10**9);
-                console.log(reward_amount, '----reward amont');
-                
                 snapShots.push(snap);
             }
         });
@@ -73,10 +71,59 @@ export class ActionsStaking {
             token_x_stake_amount: tokenXAmount || 0,
             reward_amount: reward_amount,
             token_x_decimal: tokenXDecimal,
+            total_reward: result.total_reward,
+            penalty_fee: result.penalty_fee,
+            min_stake_hours: result.min_stake_hours,
         };
         
 
         return poolData;
+    }
+
+    public async updatePenaltyFee(
+        adminAddress: PublicKey,
+        poolAddress: PublicKey,
+        fee: number,
+        minStakeHours: number
+    ) {
+        const {blockhash} = await this.connection.getRecentBlockhash();
+        const transaction = new Transaction({
+        recentBlockhash: blockhash,
+        feePayer: adminAddress,
+        });
+        const poolProgramId = await this.getPoolProgramId(poolAddress);
+        const authority = await this.findPoolAuthority(poolAddress);
+
+        const txFee = await this.getLamportPerSignature(blockhash);
+
+        transaction.add(
+        StakeInstructions.updatePenaltyFee(
+            {
+            poolAccount: poolAddress,
+            adminAddress: adminAddress,
+            },
+            poolProgramId,
+            {
+                fee,
+                minStakeHours
+            }
+        ),
+        );
+
+        const rawTx = transaction.serialize({
+        requireAllSignatures: false,
+        verifySignatures: true,
+        });
+
+        return {
+        rawTx,
+        txFee,
+        unsignedTransaction: transaction,
+        };
+    }
+
+    public async getPoolProgramId(poolAddress: PublicKey): Promise<PublicKey> {
+        return this.getOwner(poolAddress);
     }
 
     async getBalance(tokenAccountAddress: PublicKey, tokenMintAddress = 'So11111111111111111111111111111111111111112') {

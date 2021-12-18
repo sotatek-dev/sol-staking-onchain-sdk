@@ -17,7 +17,11 @@ export const StakingPoolLayout = BufferLayout.struct([
   Layout.snapshotHistory('snap_8'),
   Layout.snapshotHistory('snap_9'),
   Layout.snapshotHistory('snap_10'),
-  // Layout.snapshotHistory('snap_11'),
+  Layout.publicKey('admins'),
+  BufferLayout.nu64('total_reward'),
+  BufferLayout.u32('penalty_fee'),
+  BufferLayout.nu64('min_stake_hours'),
+    // Layout.snapshotHistory('snap_11'),
   // Layout.snapshotHistory('snap_12'),
   // Layout.snapshotHistory('snap_13'),
   // Layout.snapshotHistory('snap_14'),
@@ -107,7 +111,6 @@ export const StakingPoolLayout = BufferLayout.struct([
   // Layout.snapshotHistory('snap_98'),
   // Layout.snapshotHistory('snap_99'),
   // Layout.snapshotHistory('snap_100'),
-  Layout.publicKey('admins'),
   ]);
 
 export const InitPoolLayout = [
