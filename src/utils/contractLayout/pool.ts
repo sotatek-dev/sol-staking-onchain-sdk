@@ -21,6 +21,7 @@ export const StakingPoolLayout = BufferLayout.struct([
   BufferLayout.nu64('total_reward'),
   BufferLayout.u32('penalty_fee'),
   BufferLayout.nu64('min_stake_hours'),
+  BufferLayout.nu64('penalty_amount'),
     // Layout.snapshotHistory('snap_11'),
   // Layout.snapshotHistory('snap_12'),
   // Layout.snapshotHistory('snap_13'),

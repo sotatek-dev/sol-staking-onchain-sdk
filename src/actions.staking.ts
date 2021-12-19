@@ -73,6 +73,7 @@ export class ActionsStaking {
             total_reward: result.total_reward / 10**9,
             penalty_fee: result.penalty_fee,
             min_stake_hours: result.min_stake_hours,
+            penalty_amount: result.penalty_amount,
         };
         
 

@@ -12,6 +12,7 @@ export interface IExtractPoolData {
   total_reward: number,
   penalty_fee: number,
   min_stake_hours: number,
+  penalty_amount: number,
 }
 
 export interface ISnapshot {
