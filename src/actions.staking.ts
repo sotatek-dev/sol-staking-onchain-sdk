@@ -44,14 +44,6 @@ export class ActionsStaking {
         }
         const result = StakingPoolLayout.decode(Buffer.from(accountInfo.data));
         let snapShots: ISnapshot[] = [];
-        let reward_amount = 0;
-        Object.keys(result).forEach(e => {
-            if (e.includes("snap_")) {
-                const snap = snapshotHistoryDetail.decode(Buffer.from(result[e]));
-                reward_amount += (snap.token_y_reward_amount / 10**9);
-                snapShots.push(snap);
-            }
-        });
 
         const balanceToken = await this.connection.getTokenAccountBalance(
             new PublicKey(result.token_x_stake_account)
@@ -69,7 +61,7 @@ export class ActionsStaking {
             token_x_stake_account: new PublicKey(result.token_x_stake_account).toString(),
             token_y_reward_account: new PublicKey(result.token_y_reward_account).toString(),
             token_x_stake_amount: tokenXAmount || 0,
-            reward_amount: reward_amount,
+            reward_amount: result.reward_amount / 10**9,
             token_x_decimal: tokenXDecimal,
             total_reward: result.total_reward,
             penalty_fee: result.penalty_fee,
