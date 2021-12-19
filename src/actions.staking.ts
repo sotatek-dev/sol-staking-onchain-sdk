@@ -59,7 +59,7 @@ export class ActionsStaking {
 
         const mintTokenXAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(result.token_x_stake_account))
         const tokenXDecimal = await this.getTokenDecimalsFromMintAccount(mintTokenXAddress);
-        const tokenXAmount = tokenXDecimal ? (+balanceToken?.value?.amount / 10**tokenXDecimal) : +balanceToken?.value?.amount
+        const tokenXBalance = tokenXDecimal ? (+balanceToken?.value?.amount / 10**tokenXDecimal) : +balanceToken?.value?.amount
         
         const poolData = {
             nonce: result.nonce,
@@ -68,12 +68,13 @@ export class ActionsStaking {
             admins: new PublicKey(result.admins).toString(),
             token_x_stake_account: new PublicKey(result.token_x_stake_account).toString(),
             token_y_reward_account: new PublicKey(result.token_y_reward_account).toString(),
-            token_x_stake_amount: tokenXAmount || 0,
+            token_x_balance: tokenXBalance || 0,
             token_x_decimal: tokenXDecimal,
             total_reward: result.total_reward / 10**9,
             penalty_fee: result.penalty_fee,
             min_stake_hours: result.min_stake_hours,
             penalty_amount: result.penalty_amount / 10**tokenXDecimal,
+            token_x_staked_amount: tokenXBalance - result.penalty_amount / 10**tokenXDecimal
         };
         
 
