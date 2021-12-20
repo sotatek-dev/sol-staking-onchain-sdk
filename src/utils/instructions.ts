@@ -191,18 +191,16 @@ export class Instructions {
   static transferPoolAdmin(
     accounts: {
       poolAccount: PublicKey;
-      userAuthority: PublicKey;
       adminAddress: PublicKey;
       newAdminAddress: PublicKey;
     },
     poolProgramId: PublicKey,
   ): TransactionInstruction {
-    const {poolAccount, adminAddress, newAdminAddress, userAuthority} = accounts;
+    const {poolAccount, adminAddress, newAdminAddress} = accounts;
     const keys = [
       {pubkey: poolAccount, isSigner: false, isWritable: true},
       {pubkey: adminAddress, isSigner: true, isWritable: true},
       {pubkey: newAdminAddress, isSigner: false, isWritable: true},
-      {pubkey: userAuthority, isSigner: false, isWritable: false},
     ];
 
     const commandDataLayout = BufferLayout.struct([BufferLayout.u8('instruction')]);
@@ -211,7 +209,7 @@ export class Instructions {
     {
       const encodeLength = commandDataLayout.encode(
         {
-          instruction: 5, // Transfer Admin
+          instruction: 100, // Transfer Pool Admin
         },
         data,
       );

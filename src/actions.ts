@@ -139,7 +139,6 @@ export class Actions {
       feePayer: adminAddress,
     });
     const poolProgramId = await this.getPoolProgramId(poolAddress);
-    const authority = await this.findPoolAuthority(poolAddress);
 
     const txFee = await this.getLamportPerSignature(blockhash);
 
@@ -147,7 +146,6 @@ export class Actions {
       Instructions.transferPoolAdmin(
         {
           poolAccount: poolAddress,
-          userAuthority: authority,
           adminAddress: adminAddress,
           newAdminAddress: newAdminAddress,
         },
