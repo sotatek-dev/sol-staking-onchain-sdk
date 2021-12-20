@@ -333,6 +333,58 @@ export class StakeInstructions {
         });
     }
 
+    static withdrawPenalty(
+        accounts: {
+            stakePoolAccount: PublicKey;
+            stakePoolAuthority: PublicKey;
+            tokenProgramId: PublicKey;
+
+            adminAddress: PublicKey;
+            adminAssociatedTokenXAccount: PublicKey;
+
+            poolTokenXStakeAccount: PublicKey;
+        },
+        poolProgramId: PublicKey,
+    ): TransactionInstruction {
+        const {
+            stakePoolAccount,
+            stakePoolAuthority,
+            tokenProgramId,
+            adminAddress,
+            adminAssociatedTokenXAccount,
+            poolTokenXStakeAccount
+        } = accounts;
+        const keys = [
+            {pubkey: stakePoolAccount, isSigner: false, isWritable: true},
+            {pubkey: stakePoolAuthority, isSigner: false, isWritable: false},
+            {pubkey: tokenProgramId, isSigner: false, isWritable: false},
+            {pubkey: adminAddress, isSigner: true, isWritable: true},
+            {pubkey: adminAssociatedTokenXAccount, isSigner: false, isWritable: true},
+            {pubkey: poolTokenXStakeAccount, isSigner: false, isWritable: true}
+        ];
+
+        const commandDataLayout = BufferLayout.struct([
+            BufferLayout.u8('instruction'),
+        ]);
+
+        let data = Buffer.alloc(1024);
+        {
+            const encodeLength = commandDataLayout.encode(
+                {
+                    instruction: 103, // withdraw amount instruction
+                },
+                data,
+            );
+            data = data.slice(0, encodeLength);
+        }
+
+        return new TransactionInstruction({
+            keys,
+            programId: poolProgramId,
+            data,
+        });
+    }
+
     static withdrawRewardsByUser(
         accounts: {
             stakePoolAccount: PublicKey;

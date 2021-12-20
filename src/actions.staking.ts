@@ -558,6 +558,77 @@ export class ActionsStaking {
     }
 
     /**
+     * unStake by user
+     * @param payer PublicKey
+     * @param adminAddress PublicKey
+     * @param stakePoolAddress PublicKey
+     * @returns Promise<string> transaction id
+     */
+     public async withdrawPenalty(
+        payer: PublicKey,
+        adminAddress: PublicKey,
+        stakePoolAddress: PublicKey,
+    ): Promise<IResponseTxFee> {
+        const {blockhash} = await this.connection.getRecentBlockhash();
+        const transaction = new Transaction({
+            recentBlockhash: blockhash,
+            feePayer: payer,
+        });
+        const stakePoolProgramId = await this.getStakePoolProgramId(stakePoolAddress);
+        const {token_x_stake_account, token_y_reward_account} = await this.readPool(stakePoolAddress);
+        const authority = await this.findPoolAuthority(stakePoolAddress);
+        const mintTokenXAddress = await this.getSPLMintTokenAccountInfo(new PublicKey(token_x_stake_account))
+        const adminTokenXAddress = await this.findAssociatedTokenAddress(adminAddress, new PublicKey(mintTokenXAddress));
+
+        const {
+            exists: isExisted,
+            associatedAddress: stakePoolAdminAccount,
+        } = await this.getStakePoolAssociatedAccountInfo(adminAddress, stakePoolAddress);
+
+        if (!isExisted) {
+            // create joined user data if not exists
+            transaction.add(
+                StakeInstructions.initStakeMemberAccount(
+                    adminAddress,
+                    stakePoolAdminAccount,
+                    stakePoolAddress,
+                ),
+                StakeInstructions.initStakeMemberData(
+                    adminAddress,
+                    stakePoolAddress,
+                    new PublicKey(stakePoolAdminAccount),
+                ),
+            );
+        }
+
+        const txFee = await this.getLamportPerSignature(blockhash);
+        transaction.add(
+            StakeInstructions.withdrawPenalty(
+                {
+                    stakePoolAccount: new PublicKey(stakePoolAddress),
+                    stakePoolAuthority: authority,
+                    tokenProgramId: TOKEN_PROGRAM_ID,
+                    adminAddress,
+                    adminAssociatedTokenXAccount: adminTokenXAddress,
+                    poolTokenXStakeAccount:  new PublicKey(token_x_stake_account),
+                },
+                stakePoolProgramId,
+            ),
+        );
+
+        const rawTx = transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: true,
+        });
+
+        return {
+            rawTx,
+            txFee,
+            unsignedTransaction: transaction,
+        };
+    }
+
+    /**
      * Withdraw reward by user
      * @param payer
      * @param userAddress
