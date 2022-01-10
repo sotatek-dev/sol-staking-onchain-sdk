@@ -10,7 +10,6 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import * as BufferLayout from 'buffer-layout';
-import {POOL_PROGRAM_ID} from '../../index';
 import {InitPoolLayout, StakingPoolLayout} from './contractLayout';
 import * as Layout from './layout';
 import {Numberu64} from './layout';
@@ -92,7 +91,7 @@ export class Instructions {
     });
   }
 
-  static async createPoolAccountInstruction(connection: Connection, payer: PublicKey) {
+  static async createPoolAccountInstruction(connection: Connection, payer: PublicKey, programId: PublicKey) {
     const poolAccount = Keypair.generate();
     const balanceNeeded = await connection.getMinimumBalanceForRentExemption(StakingPoolLayout.span);
 
@@ -103,7 +102,7 @@ export class Instructions {
         newAccountPubkey: new PublicKey(poolAccount.publicKey),
         lamports: balanceNeeded,
         space: StakingPoolLayout.span,
-        programId: new PublicKey(POOL_PROGRAM_ID),
+        programId
       }),
     };
   }
@@ -522,6 +521,7 @@ export class Instructions {
     inputData: {
       nonce: number;
     },
+    programId: PublicKey
   ) {
     const keys = [
       {pubkey: accounts.poolAccount, isSigner: false, isWritable: true},
@@ -536,10 +536,7 @@ export class Instructions {
       }
     ];
 
-    console.log('--start');
-
     const commandDataLayout = BufferLayout.struct(InitPoolLayout);
-    console.log('--start2-------', inputData.nonce);
     let data = Buffer.alloc(1024);
     {
       const encodeLength = commandDataLayout.encode(
@@ -554,7 +551,7 @@ export class Instructions {
 
     return new TransactionInstruction({
       keys,
-      programId: new PublicKey(POOL_PROGRAM_ID),
+      programId,
       data,
     });
   }
@@ -585,29 +582,5 @@ export class Instructions {
       newTokenAccount,
       owner,
     );
-  }
-
-  static createInstructionStoreTxId(txId: string, depositor: PublicKey) {
-    const keys = [{pubkey: depositor, isSigner: true, isWritable: true}];
-
-    const length = Buffer.from(txId, 'utf8').length;
-
-    const commandDataLayout = BufferLayout.struct([BufferLayout.blob(length, 'tx_id')]);
-    let data = Buffer.alloc(1024);
-    {
-      const encodeLength = commandDataLayout.encode(
-        {
-          tx_id: Buffer.from(txId, 'utf8'),
-        },
-        data,
-      );
-      data = data.slice(0, encodeLength);
-    }
-
-    return new TransactionInstruction({
-      keys,
-      programId: new PublicKey(POOL_PROGRAM_ID),
-      data,
-    });
   }
 }

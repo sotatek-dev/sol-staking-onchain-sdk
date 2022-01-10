@@ -9,7 +9,7 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import Decimal from 'decimal.js';
-import {IExtractPoolData, Instructions, StakingPoolLayout, POOL_PROGRAM_ID} from '../index';
+import {IExtractPoolData, Instructions, StakingPoolLayout} from '../index';
 
 export class Actions {
   private connection: Connection;
@@ -18,16 +18,15 @@ export class Actions {
     this.connection = connection;
   }
 
-  async createPool(payer: PublicKey, tokenX: PublicKey, tokenY: PublicKey, admin: PublicKey) {
+  async createPool(payer: PublicKey, tokenX: PublicKey, tokenY: PublicKey, admin: PublicKey, programId: PublicKey) {
     const recentBlockhash = await this.connection.getRecentBlockhash();
     const transaction = new Transaction({
       recentBlockhash: recentBlockhash.blockhash,
       feePayer: payer,
     });
 
-    const {poolAccount, instruction} = await Instructions.createPoolAccountInstruction(this.connection,payer);
+    const {poolAccount, instruction} = await Instructions.createPoolAccountInstruction(this.connection, payer, programId);
     transaction.add(instruction);
-    const programId = new PublicKey(POOL_PROGRAM_ID);
     const [poolAuthority, nonce] = await PublicKey.findProgramAddress(
       [poolAccount.publicKey.toBuffer()],
       programId,
@@ -69,6 +68,7 @@ export class Actions {
         {
           nonce,
         },
+        programId
       ),
     );
 

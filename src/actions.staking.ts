@@ -1,7 +1,6 @@
 import {Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction} from "@solana/web3.js";
 import {StakeInstructions} from "./utils/stakeInstructions";
-import {CURRENT_STAKE_PROGRAM_ID} from "./constants";
-import {IExtractPoolData, Instructions, IResponseTxFee, ISnapshot, MemberLayout, snapshotHistoryDetail, StakingPoolLayout} from "./utils";
+import {getProgramIdFromPool, IExtractPoolData, Instructions, IResponseTxFee, ISnapshot, MemberLayout, snapshotHistoryDetail, StakingPoolLayout} from "./utils";
 import Decimal from "decimal.js";
 import {AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout, Token, TOKEN_PROGRAM_ID} from "@solana/spl-token";
 import { WRAPPED_SOL_MINT } from "@project-serum/serum/lib/token-instructions";
@@ -370,6 +369,8 @@ export class ActionsStaking {
             associatedAddress: stakePoolMemberAccount,
         } = await this.getStakePoolAssociatedAccountInfo(userAddress, stakePoolAddress);
 
+        const programId = await getProgramIdFromPool(this.connection, stakePoolAddress);
+
         if (!isExisted) {
             // create joined user data if not exists
             transaction.add(
@@ -377,11 +378,13 @@ export class ActionsStaking {
                     userAddress,
                     stakePoolMemberAccount,
                     stakePoolAddress,
+                    programId
                 ),
                 StakeInstructions.initStakeMemberData(
                     userAddress,
                     stakePoolAddress,
                     stakePoolMemberAccount,
+                    programId
                 ),
             );
         }
@@ -483,6 +486,7 @@ export class ActionsStaking {
             exists: isExisted,
             associatedAddress: stakePoolMemberAccount,
         } = await this.getStakePoolAssociatedAccountInfo(userAddress, stakePoolAddress);
+        const programId = await getProgramIdFromPool(this.connection, stakePoolAddress);
 
         if (!isExisted) {
             // create joined user data if not exists
@@ -491,11 +495,13 @@ export class ActionsStaking {
                     userAddress,
                     stakePoolMemberAccount,
                     stakePoolAddress,
+                    programId
                 ),
                 StakeInstructions.initStakeMemberData(
                     userAddress,
                     stakePoolAddress,
                     new PublicKey(stakePoolMemberAccount),
+                    programId
                 ),
             );
         }
@@ -584,6 +590,7 @@ export class ActionsStaking {
             exists: isExisted,
             associatedAddress: stakePoolAdminAccount,
         } = await this.getStakePoolAssociatedAccountInfo(adminAddress, stakePoolAddress);
+        const programId = await getProgramIdFromPool(this.connection, stakePoolAddress);
 
         if (!isExisted) {
             // create joined user data if not exists
@@ -592,11 +599,13 @@ export class ActionsStaking {
                     adminAddress,
                     stakePoolAdminAccount,
                     stakePoolAddress,
+                    programId
                 ),
                 StakeInstructions.initStakeMemberData(
                     adminAddress,
                     stakePoolAddress,
                     new PublicKey(stakePoolAdminAccount),
+                    programId
                 ),
             );
         }
@@ -655,6 +664,7 @@ export class ActionsStaking {
             exists: isExisted,
             associatedAddress: stakePoolMemberAccount,
         } = await this.getStakePoolAssociatedAccountInfo(userAddress, stakePoolAddress);
+        const programId = await getProgramIdFromPool(this.connection, stakePoolAddress);
 
         if (!isExisted) {
             // create joined user data if not exists
@@ -663,11 +673,13 @@ export class ActionsStaking {
                     userAddress,
                     stakePoolMemberAccount,
                     stakePoolAddress,
+                    programId
                 ),
                 StakeInstructions.initStakeMemberData(
                     userAddress,
                     stakePoolAddress,
                     new PublicKey(stakePoolMemberAccount),
+                    programId
                 ),
             );
         }
@@ -757,16 +769,19 @@ export class ActionsStaking {
         targetAddress: PublicKey,
         stakePoolAddress,
     ): Promise<PublicKey> {
-        return (
-            await PublicKey.findProgramAddress(
-                [
-                    targetAddress.toBuffer(),
-                    new PublicKey(CURRENT_STAKE_PROGRAM_ID).toBuffer(),
-                    stakePoolAddress.toBuffer(),
-                ],
-                new PublicKey(CURRENT_STAKE_PROGRAM_ID),
-            )
-        )[0];
+        const programId = await getProgramIdFromPool(this.connection, stakePoolAddress);
+        if (programId) {
+            return (
+                await PublicKey.findProgramAddress(
+                    [
+                        targetAddress.toBuffer(),
+                        programId.toBuffer(),
+                        stakePoolAddress.toBuffer(),
+                    ],
+                    programId,
+                )
+            )[0];
+        }
     }
 
     /**
@@ -783,16 +798,19 @@ export class ActionsStaking {
         });
 
         const memberStakeAccount = await this.findAssociatedStakeAddress(userAddress, stakePoolAddress);
+        const programId = await getProgramIdFromPool(this.connection, stakePoolAddress);
         transaction.add(
             StakeInstructions.initStakeMemberAccount(
                 userAddress,
                 memberStakeAccount,
                 stakePoolAddress,
+                programId
             ),
             StakeInstructions.initStakeMemberData(
                 userAddress,
                 stakePoolAddress,
                 memberStakeAccount,
+                programId
             ),
         );
 

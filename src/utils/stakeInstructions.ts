@@ -1,6 +1,6 @@
 import {PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, TransactionInstruction} from "@solana/web3.js";
 import * as BufferLayout from 'buffer-layout';
-import {clockSysvarAccount, CURRENT_STAKE_PROGRAM_ID} from "../constants";
+import {clockSysvarAccount} from "../constants";
 import * as Layout from './layout';
 import {Numberu64} from "./layout";
 
@@ -10,6 +10,7 @@ export class StakeInstructions {
         owner: PublicKey,
         associatedStakeAccount: PublicKey,
         stake: PublicKey,
+        programId: PublicKey
     ): TransactionInstruction {
         const keys = [
             {
@@ -38,7 +39,7 @@ export class StakeInstructions {
 
         return new TransactionInstruction({
             keys,
-            programId: new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+            programId,
             data,
         });
     }
@@ -48,6 +49,7 @@ export class StakeInstructions {
         owner: PublicKey,
         stakePoolAddress: PublicKey,
         associatedStakeAccount: PublicKey,
+        programId: PublicKey
     ): TransactionInstruction {
         const keys = [
             {pubkey: associatedStakeAccount, isSigner: false, isWritable: true},
@@ -70,7 +72,7 @@ export class StakeInstructions {
         }
         return new TransactionInstruction({
             keys,
-            programId: new PublicKey(CURRENT_STAKE_PROGRAM_ID),
+            programId,
             data,
         });
     }

@@ -2,6 +2,7 @@ import {
   Account,
   Connection,
   Keypair,
+  PublicKey,
   sendAndConfirmTransaction as realSendAndConfirmTransaction,
   Transaction,
   TransactionSignature,
@@ -37,6 +38,11 @@ export async function sendAndConfirmTransaction(
     commitment: 'confirmed',
     preflightCommitment: 'recent',
   });
+}
+
+export async function getProgramIdFromPool(connection: Connection, poolAddress: PublicKey) {
+  const poolInfo = await connection.getAccountInfo(poolAddress)
+  return new PublicKey(poolInfo?.owner?.toString());
 }
 
 export function round(num: number, decimals: number) {
